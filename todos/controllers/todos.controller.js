@@ -1,6 +1,6 @@
 /**
  * Controllers Structure
- * @param {Objecy} res
+ * @param {Object} res
  * @param {Object} options
  * @param {Int} status - set HTTP status to:
  * 200 [default]: "OK"
@@ -11,7 +11,7 @@
 
 import db from '../../db/db';
 
-// Common custom `res` handler
+// Common custom `res` handler, being success state set as default
 const response = (res, options, status = 200) =>
   res.status(status).send({ success: true, ...options });
 
