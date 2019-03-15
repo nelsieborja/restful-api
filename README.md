@@ -59,18 +59,18 @@ WIP...
      yarn add dotenv
      ```
 
-   - ### Require `dotenv` file at the top of `index.js`
+   - #### Require `dotenv` file at the top of `index.js`
 
      ```js
      // db/models/index.js
      require('dotenv').config();
      ```
 
-   - ### Create `.env` file in the root directory
+   - #### Create `.env` file in the root directory
 
      This will contain all node environment variables.
 
-   - ### Replace `development` section with the following code in `database.json` file:
+   - #### Replace `development` section with the following code in `database.json` file:
      ```js
       // config/database.json
      "development": {
