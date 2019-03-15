@@ -9,6 +9,7 @@
  * 400: "Bad Request"
  */
 
+import models from '../../db/models';
 import db from '../../db/db';
 
 // Common custom `res` handler, being success state set as default
@@ -47,37 +48,63 @@ export const getTodo = ({ params: { id } }, res) => {
   );
 };
 
-export const createTodo = ({ body: { title, description } }, res) => {
+export const createTodo = ({ body: { title } }, res) => {
+  // // Validates body requests
+  // if (!title || !description) {
+  //   return response(
+  //     res,
+  //     {
+  //       success: false,
+  //       message: `${!title ? 'Title' : 'Description'} is required`
+  //     },
+  //     400
+  //   );
+  // }
+
+  // // Creates new todo
+  // const createdTodo = {
+  //   id: db.length + 1,
+  //   title,
+  //   description
+  // };
+  // // Inserts new todo to `db`
+  // db.push(createdTodo);
+
+  // // Returns "Created" response along with the new todo
+  // return response(
+  //   res,
+  //   {
+  //     message: 'Todo added successfully',
+  //     createdTodo
+  //   },
+  //   201
+  // );
+
   // Validates body requests
-  if (!title || !description) {
+  if (!title) {
     return response(
       res,
       {
         success: false,
-        message: `${!title ? 'Title' : 'Description'} is required`
+        message: 'Title is required'
       },
       400
     );
   }
 
-  // Creates new todo
-  const createdTodo = {
-    id: db.length + 1,
-    title,
-    description
+  const todo = {
+    title
   };
-  // Inserts new todo to `db`
-  db.push(createdTodo);
-
-  // Returns "Created" response along with the new todo
-  return response(
-    res,
-    {
-      message: 'Todo added successfully',
-      createdTodo
-    },
-    201
-  );
+  models.Todo.create(todo).then(todo => {
+    return response(
+      res,
+      {
+        message: 'Todo added successfully',
+        todo
+      },
+      201
+    );
+  });
 };
 
 export const updateTodo = ({ params: { id }, body: { title, description } }, res) => {
