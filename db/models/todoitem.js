@@ -3,8 +3,7 @@ module.exports = (sequelize, DataTypes) => {
   const TodoItem = sequelize.define(
     'TodoItem',
     {
-      description: DataTypes.STRING,
-      allowNull: false
+      description: DataTypes.STRING
     },
     {}
   );

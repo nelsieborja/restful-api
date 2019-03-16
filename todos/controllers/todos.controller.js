@@ -5,179 +5,113 @@
  * @param {Int} status - set HTTP status to:
  * 200 [default]: "OK"
  * 201: "Created"
- * 404: "Not Found"
  * 400: "Bad Request"
+ * 403: "Forbidden"
+ * 404: "Not Found"
+ * 500: Internal Server Error
  */
 
-import models from '../../db/models';
-import db from '../../db/db';
+import { Todo as TodoModel } from '../../db/models';
 
 // Common custom `res` handler, being success state set as default
 const response = (res, options, status = 200) =>
   res.status(status).send({ success: true, ...options });
 
+// Get all todos controller
 export const getAllTodos = (req, res) => {
-  return response(res, {
-    message: 'Todos retrieved successfully',
-    todos: db
-  });
+  TodoModel.findAll()
+    // Returns todos with a successful response
+    .then(todos => response(res, { message: 'Todos retrieved successfully', todos }))
+    // Catches any internal server error
+    .catch(error => response(res, { message: error }, 500));
 };
 
+// Get single todo controller
 export const getTodo = ({ params: { id } }, res) => {
-  // `req.params` - an object that contains all the parameters passed to the routes
+  // Searches todo by its ID
+  TodoModel.findByPk(parseInt(id, 10))
+    .then(todo => {
+      if (todo) {
+        // Returns todo with a successful response
+        return response(res, { message: 'Todo retrieved successfully', todo });
+      }
 
-  // Loop through `db` to find which todo ID matches the param ID
-  const todo = db.filter(todo => todo.id === parseInt(id, 10));
-
-  // Returns the match with a successful response
-  if (todo.length > 0) {
-    return response(res, {
-      message: 'Todo retrieved successfully',
-      todo
-    });
-  }
-
-  // Returns "Not Found" response in case no match found
-  return response(
-    res,
-    {
-      success: false,
-      message: 'Todo does not exist'
-    },
-    404
-  );
+      // Returns "Not Found" response in case todo doesn't exist in DB
+      return response(res, { success: false, message: 'Todo does not exist' }, 404);
+    })
+    // Catches any internal server error
+    .catch(error => response(res, { message: error }, 500));
 };
 
+// Create todo controller
 export const createTodo = ({ body: { title } }, res) => {
-  // // Validates body requests
-  // if (!title || !description) {
-  //   return response(
-  //     res,
-  //     {
-  //       success: false,
-  //       message: `${!title ? 'Title' : 'Description'} is required`
-  //     },
-  //     400
-  //   );
-  // }
-
-  // // Creates new todo
-  // const createdTodo = {
-  //   id: db.length + 1,
-  //   title,
-  //   description
-  // };
-  // // Inserts new todo to `db`
-  // db.push(createdTodo);
-
-  // // Returns "Created" response along with the new todo
-  // return response(
-  //   res,
-  //   {
-  //     message: 'Todo added successfully',
-  //     createdTodo
-  //   },
-  //   201
-  // );
-
   // Validates body requests
   if (!title) {
-    return response(
-      res,
-      {
-        success: false,
-        message: 'Title is required'
-      },
-      400
-    );
+    return response(res, { success: false, message: 'Title is required' }, 400);
   }
 
-  const todo = {
-    title
-  };
-  models.Todo.create(todo).then(todo => {
-    return response(
-      res,
-      {
-        message: 'Todo added successfully',
-        todo
-      },
-      201
-    );
-  });
+  // Checks if todo already exists in DB, by searching for `title` attribute
+  TodoModel.findOne({ where: { title } })
+    .then(todoAlreadyExists => {
+      // Returns "Forbidden" response if todo already exists in DB
+      if (todoAlreadyExists) {
+        return response(
+          res,
+          { success: false, message: 'A todo with that title already exists' },
+          403
+        );
+      }
+
+      // Otherwise create the todo and returns with "Created" response along with the created todo
+      TodoModel.create({ title })
+        .then(todo => response(res, { message: 'Todo added successfully', todo }, 201))
+        // Catches any internal server error
+        .catch(error => response(res, { message: error }, 500));
+    })
+    // Catches any internal server error
+    .catch(error => response(res, { message: error }, 500));
 };
 
-export const updateTodo = ({ params: { id }, body: { title, description } }, res) => {
-  const todoUpdateID = parseInt(id, 10);
-  let todoFoundIndex = null;
+// Update todo controller
+export const updateTodo = ({ params: { id }, body: { title } }, res) => {
+  // Searches todo by its ID
+  TodoModel.findByPk(parseInt(id, 10))
+    .then(todo => {
+      // Returns "Not Found" response if todo doesn't exist in DB
+      if (!todo) return response(res, { success: false, message: 'Todo not found' }, 404);
 
-  // Searches the index of param ID in `db`
-  for (const index in db) {
-    if (db[index].id === todoUpdateID) {
-      todoFoundIndex = index;
-    }
-  }
+      // Validates body requests
+      if (!title) return response(res, { success: false, message: 'Title is required' }, 400);
 
-  // Returns "Not Found" response if index not found
-  if (!todoFoundIndex) {
-    return response(
-      res,
-      {
-        success: false,
-        message: 'Todo not found'
-      },
-      404
-    );
-  }
-
-  // Validates body requests
-  if (!title || !description) {
-    return response(
-      res,
-      {
-        success: false,
-        message: `${!title ? 'Title' : 'Description'} is required`
-      },
-      400
-    );
-  }
-
-  // Creates new object for the todo to update
-  const updatedTodo = {
-    id: todoUpdateID,
-    title,
-    description
-  };
-  // Replaces todo with new the object
-  db.splice(todoFoundIndex, 1, updatedTodo);
-
-  // Returns successful response along with the updated todo
-  return response(res, {
-    message: 'Todo updated successfully',
-    updatedTodo
-  });
+      // Returns successful response along with the updated todo
+      todo
+        .update({ title })
+        .then(updatedTodo =>
+          response(res, {
+            message: 'Todo updated successfully',
+            updatedTodo
+          })
+        )
+        // Catches any internal server error
+        .catch(error => response(res, { message: error }, 500));
+    })
+    // Catches any internal server error
+    .catch(error => response(res, { message: error }, 500));
 };
 
+// Delete todo controller
 export const deleteTodo = ({ params: { id } }, res) => {
-  // Loop through `db` to find which todo ID matches the param ID
-  for (const index in db) {
-    if (db[index].id === parseInt(id, 10)) {
-      // Removes matched todo from the `db`
-      db.splice(index, 1);
-      // Returns successful response
-      return response(res, {
-        message: 'Todo deleted successfully'
-      });
-    }
-  }
+  // Searches todo by its ID
+  TodoModel.findByPk(parseInt(id, 10))
+    .then(todo => {
+      // Returns "Not Found" response if todo doesn't exist in DB
+      if (!todo) return response(res, { success: false, message: 'Todo not found' }, 404);
 
-  // Otherwise returns "Not Found" response
-  return response(
-    res,
-    {
-      success: false,
-      message: 'todo not found'
-    },
-    404
-  );
+      // Deletes todo
+      todo.destroy();
+      // Returns successful response
+      return response(res, { message: 'Todo deleted successfully' });
+    })
+    // Catches any internal server error
+    .catch(error => response(res, { message: error }, 500));
 };
